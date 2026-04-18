@@ -17,11 +17,20 @@ st.set_page_config(
 def get_engine():
     return create_engine(st.secrets["db_url"])
 
-engine = get_engine()
+try:
+    engine = get_engine()
+except Exception as e:
+    st.error(f"Could not connect to the database: {e}")
+    st.stop()
 
 def query(sql):
-    with engine.connect() as conn:
-        return pd.read_sql(text(sql), conn)
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(text(sql), conn)
+            return df
+    except Exception as e:
+        st.error(f"Database query failed: {e}")
+        st.stop()
 
 # Title
 st.title("⚔️ Clash of Clans — Player Analytics Dashboard")
@@ -31,6 +40,9 @@ st.divider()
 # ── KPI METRICS ROW ──────────────────────────────────────────
 @st.cache_data
 def load_kpi_data():
+    df = query("SELECT COUNT(*) AS c FROM players")
+    if df is None or df.empty:
+        return None
     return {
         'total_players': query("SELECT COUNT(*) AS c FROM players").iloc[0]['c'],
         'total_clans':   query("SELECT COUNT(*) AS c FROM clans").iloc[0]['c'],
@@ -40,6 +52,10 @@ def load_kpi_data():
     }
 
 kpis = load_kpi_data()
+if kpis is None:
+    st.error("Could not load dashboard data. Please try again later.")
+    st.stop()
+
 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 kpi1.metric("Total Players",  f"{kpis['total_players']:,}")
 kpi2.metric("Total Clans",    f"{kpis['total_clans']:,}")
@@ -135,7 +151,7 @@ if page == "📈 Progression Analysis":
                 AND t.troop_type IN ('elixir_troop', 'dark_elixir_troop', 'siege_machine', 'pet')
                 AND p.town_hall_level BETWEEN 15 AND 18
                 GROUP BY t.troop_name, t.troop_type, p.town_hall_level
-                HAVING total_players > 100
+                HAVING COUNT(DISTINCT p.player_tag) > 100
             )
             SELECT town_hall_level, troop_type, troop_name, avg_completion_pct, total_players
             FROM ranked WHERE rnk <= 2
@@ -143,6 +159,9 @@ if page == "📈 Progression Analysis":
         """)
 
     df_bottleneck = load_bottleneck_data()
+    if df_bottleneck is None or df_bottleneck.empty:
+        st.warning("No bottleneck data available.")
+        st.stop()
     th_levels = sorted(df_bottleneck['town_hall_level'].unique())
 
     fig2 = make_subplots(
