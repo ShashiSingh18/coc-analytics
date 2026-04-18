@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .env
 *.ipynb_checkpoints/
+coc_analytics.sql
+coc_analytics_slim.sql
+coc_analytics_slim2.sql
+troop_home_only.sql
+coc_final.sql
