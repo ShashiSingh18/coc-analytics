@@ -40,15 +40,23 @@ st.divider()
 # ── KPI METRICS ROW ──────────────────────────────────────────
 @st.cache_data
 def load_kpi_data():
-    df = query("SELECT COUNT(*) AS c FROM players")
+    df = query("""
+        SELECT
+            (SELECT COUNT(*) FROM players) AS total_players,
+            (SELECT COUNT(*) FROM clans) AS total_clans,
+            (SELECT COUNT(*) FROM wars) AS total_wars,
+            (SELECT COUNT(*) FROM players WHERE churn_risk_score >= 0.6) AS high_churn,
+            (SELECT ROUND(AVG(trophies)) FROM players) AS avg_trophies
+    """)
     if df is None or df.empty:
         return None
+    row = df.iloc[0]
     return {
-        'total_players': query("SELECT COUNT(*) AS c FROM players").iloc[0]['c'],
-        'total_clans':   query("SELECT COUNT(*) AS c FROM clans").iloc[0]['c'],
-        'total_wars':    query("SELECT COUNT(*) AS c FROM wars").iloc[0]['c'],
-        'high_churn':    query("SELECT COUNT(*) AS c FROM players WHERE churn_risk_score >= 0.6").iloc[0]['c'],
-        'avg_trophies':  query("SELECT ROUND(AVG(trophies)) AS c FROM players").iloc[0]['c'],
+        'total_players': row['total_players'],
+        'total_clans':   row['total_clans'],
+        'total_wars':    row['total_wars'],
+        'high_churn':    row['high_churn'],
+        'avg_trophies':  row['avg_trophies'],
     }
 
 kpis = load_kpi_data()
@@ -355,6 +363,7 @@ elif page == "⏱️ Attack Duration":
             WHERE duration_seconds > 0
             AND duration_seconds <= 180
             AND destruction_pct > 0
+            ORDER BY RAND()
             LIMIT 5000
         """)
 
@@ -523,12 +532,20 @@ elif page == "💀 Churn Risk":
 
     with col1:
         df_churn = load_churn_dist()
+        churn_color_map = {
+            'Critical': '#7B0000',
+            'High':     '#C62828',
+            'Medium':   '#EF6C00',
+            'Low':      '#F9A825',
+            'Minimal':  '#FFF9C4',
+        }
         fig8 = px.pie(
             df_churn,
             values='total_players',
             names='risk_category',
             title='Churn risk distribution across all players',
-            color_discrete_sequence=px.colors.sequential.RdBu
+            color='risk_category',
+            color_discrete_map=churn_color_map,
         )
         st.plotly_chart(fig8, use_container_width=True)
 
