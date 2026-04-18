@@ -532,9 +532,6 @@ elif page == "💀 Churn Risk":
 
     with col1:
         df_churn = load_churn_dist()
-        category_order = ['Critical', 'High', 'Medium', 'Low', 'Minimal']
-        df_churn['risk_category'] = pd.Categorical(df_churn['risk_category'], categories=category_order, ordered=True)
-        df_churn = df_churn.sort_values('risk_category')
         churn_color_map = {
             'Critical': '#7B0000',
             'High':     '#C62828',
@@ -549,6 +546,7 @@ elif page == "💀 Churn Risk":
             title='Churn risk distribution across all players',
             color='risk_category',
             color_discrete_map=churn_color_map,
+            category_orders={'risk_category': ['Critical', 'High', 'Medium', 'Low', 'Minimal']}
         )
         st.plotly_chart(fig8, use_container_width=True)
 
