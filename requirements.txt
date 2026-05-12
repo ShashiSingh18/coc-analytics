@@ -4,3 +4,4 @@ plotly
 sqlalchemy
 pymysql
 python-dotenv
+cryptography
